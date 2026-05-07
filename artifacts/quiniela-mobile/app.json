@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Quiniela Mundial 2026",
+    "slug": "quiniela-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "quiniela-mobile",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#060e1a"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.quiniela.mundial2026"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#060e1a"
+      },
+      "package": "com.quiniela.mundial2026"
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png",
+      "backgroundColor": "#060e1a"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0e5ea497-5020-479c-9479-9a964c303b21"
+      }
+    },
+    "owner": "cae1814h"
+  }
+}

@@ -1,0 +1,793 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Quiniela Mundial API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: matches
+    description: World Cup match operations
+  - name: predictions
+    description: User prediction operations
+  - name: leaderboard
+    description: Leaderboard and rankings
+  - name: admin
+    description: Admin operations
+  - name: messages
+    description: Message operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /matches:
+    get:
+      operationId: listMatches
+      tags: [matches]
+      summary: List all World Cup matches
+      parameters:
+        - name: round
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: group
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Match"
+
+  /matches/{id}:
+    get:
+      operationId: getMatch
+      tags: [matches]
+      summary: Get a single match
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Match detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /matches/{id}/result:
+    put:
+      operationId: updateMatchResult
+      tags: [matches]
+      summary: Admin - set match result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMatchResultBody"
+      responses:
+        "200":
+          description: Match result updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /predictions:
+    get:
+      operationId: listMyPredictions
+      tags: [predictions]
+      summary: Get current user's predictions
+      responses:
+        "200":
+          description: User's predictions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PredictionWithMatch"
+    post:
+      operationId: upsertPrediction
+      tags: [predictions]
+      summary: Create or update a prediction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPredictionBody"
+      responses:
+        "200":
+          description: Prediction saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prediction"
+        "400":
+          description: Prediction window closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /predictions/match/{matchId}:
+    get:
+      operationId: getPredictionsForMatch
+      tags: [predictions]
+      summary: Admin - get all predictions for a match
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Predictions for match
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PredictionWithUser"
+
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get player rankings by points
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /leaderboard/summary:
+    get:
+      operationId: getLeaderboardSummary
+      tags: [leaderboard]
+      summary: Get leaderboard summary stats
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardSummary"
+
+  /prize:
+    get:
+      operationId: getPrizePool
+      tags: [leaderboard]
+      summary: Get prize pool info (cuota × total players)
+      responses:
+        "200":
+          description: Prize pool data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrizePool"
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: Admin - list all users
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserWithStats"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Admin - overview stats
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: Get messages for the current user (public + private)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserMessage"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    RegisterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required:
+        - name
+        - email
+        - password
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        totalPoints:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        photoUrl:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - email
+        - role
+        - totalPoints
+        - createdAt
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    Match:
+      type: object
+      properties:
+        id:
+          type: integer
+        teamHome:
+          type: string
+        teamAway:
+          type: string
+        teamHomeFlagUrl:
+          type: string
+          nullable: true
+        teamAwayFlagUrl:
+          type: string
+          nullable: true
+        matchDate:
+          type: string
+          format: date-time
+        groupName:
+          type: string
+          nullable: true
+        round:
+          type: string
+          enum: [group, round_of_16, quarterfinal, semifinal, third_place, final]
+        homeScore:
+          type: integer
+          nullable: true
+        awayScore:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [scheduled, live, finished]
+        venue:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        exactCount:
+          type: integer
+          nullable: true
+          description: Number of players who predicted exact score (3 pts)
+        winnerCount:
+          type: integer
+          nullable: true
+          description: Number of players who predicted correct winner (1 pt)
+        missCount:
+          type: integer
+          nullable: true
+          description: Number of players who got 0 points
+      required:
+        - id
+        - teamHome
+        - teamAway
+        - matchDate
+        - round
+        - status
+
+    UpdateMatchResultBody:
+      type: object
+      properties:
+        homeScore:
+          type: integer
+          minimum: 0
+        awayScore:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum: [scheduled, live, finished]
+      required:
+        - homeScore
+        - awayScore
+        - status
+
+    Prediction:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        matchId:
+          type: integer
+        predictedHome:
+          type: integer
+        predictedAway:
+          type: integer
+        pointsEarned:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - matchId
+        - predictedHome
+        - predictedAway
+        - createdAt
+        - updatedAt
+
+    PredictionWithMatch:
+      allOf:
+        - $ref: "#/components/schemas/Prediction"
+        - type: object
+          properties:
+            match:
+              $ref: "#/components/schemas/Match"
+          required:
+            - match
+
+    PredictionWithUser:
+      allOf:
+        - $ref: "#/components/schemas/Prediction"
+        - type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/User"
+          required:
+            - user
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        photoUrl:
+          type: string
+          nullable: true
+        totalPoints:
+          type: integer
+        exactScores:
+          type: integer
+        correctWinners:
+          type: integer
+        totalPredictions:
+          type: integer
+      required:
+        - rank
+        - userId
+        - name
+        - photoUrl
+        - totalPoints
+        - exactScores
+        - correctWinners
+        - totalPredictions
+
+    PrizeDistributionItem:
+      type: object
+      properties:
+        place:
+          type: integer
+          description: Position (1, 2 or 3)
+        pct:
+          type: integer
+          description: Percentage of the prize pot
+        amount:
+          type: integer
+          description: Prize amount in Lempiras
+      required:
+        - place
+        - pct
+        - amount
+
+    PrizePool:
+      type: object
+      properties:
+        cuota:
+          type: integer
+          description: Amount each player pays (in Lempiras)
+        totalPlayers:
+          type: integer
+        prizePot:
+          type: integer
+          description: Total prize pot (cuota × totalPlayers)
+        distribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrizeDistributionItem"
+      required:
+        - cuota
+        - totalPlayers
+        - prizePot
+        - distribution
+
+    LeaderboardSummary:
+      type: object
+      properties:
+        totalPlayers:
+          type: integer
+        totalMatches:
+          type: integer
+        matchesFinished:
+          type: integer
+        topScore:
+          type: integer
+        averageScore:
+          type: number
+      required:
+        - totalPlayers
+        - totalMatches
+        - matchesFinished
+        - topScore
+        - averageScore
+
+    UserWithStats:
+      allOf:
+        - $ref: "#/components/schemas/User"
+        - type: object
+          properties:
+            totalPredictions:
+              type: integer
+            exactScores:
+              type: integer
+            correctWinners:
+              type: integer
+          required:
+            - totalPredictions
+            - exactScores
+            - correctWinners
+
+    UserMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [publico, privado]
+        subject:
+          type: string
+          nullable: true
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        fromName:
+          type: string
+        fromRole:
+          type: string
+          enum: [user, admin]
+      required:
+        - id
+        - type
+        - content
+        - createdAt
+        - fromName
+        - fromRole
+
+    SendMessageBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [publico, privado]
+        toUserId:
+          type: integer
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+        content:
+          type: string
+          minLength: 1
+      required:
+        - type
+        - content
+
+    UpsertPredictionBody:
+      type: object
+      properties:
+        matchId:
+          type: integer
+        predictedHome:
+          type: integer
+          minimum: 0
+        predictedAway:
+          type: integer
+          minimum: 0
+      required:
+        - matchId
+        - predictedHome
+        - predictedAway
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalMatches:
+          type: integer
+        matchesFinished:
+          type: integer
+        matchesScheduled:
+          type: integer
+        totalPredictions:
+          type: integer
+        matchesWithLivePredictions:
+          type: integer
+      required:
+        - totalUsers
+        - totalMatches
+        - matchesFinished
+        - matchesScheduled
+        - totalPredictions
+        - matchesWithLivePredictions
